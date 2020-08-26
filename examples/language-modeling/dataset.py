@@ -1,5 +1,6 @@
 import logging
 import os
+import tarfile
 import pickle
 import time
 from tqdm import tqdm
@@ -9,11 +10,32 @@ import torch
 from filelock import FileLock
 from torch.utils.data.dataset import Dataset
 
-from transformers.tokenization_utils import PreTrainedTokenizer
+#from transformers.tokenization_utils import PreTrainedTokenizer
 import multiprocessing
 from pathos.multiprocessing import ProcessingPool
 
+import math
+import platform
+from dataclasses import dataclass, field
+from typing import Optional
+
+from transformers import (
+	CONFIG_MAPPING,
+	MODEL_WITH_LM_HEAD_MAPPING,
+	AutoConfig,
+	AutoModelWithLMHead,
+	AutoTokenizer,
+	DataCollatorForLanguageModeling,
+	HfArgumentParser,
+	PreTrainedTokenizer,
+	Trainer,
+	TrainingArguments,
+	set_seed,
+)
+
 logger = logging.getLogger(__name__)
+MODEL_CONFIG_CLASSES = list(MODEL_WITH_LM_HEAD_MAPPING.keys())
+MDOEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
 
 """
 Loader function to solve MemoryError
@@ -35,9 +57,20 @@ class SplitTextDataset(Dataset):
 			"./", "cached_lm_{}_{}_{}".format(tokenizer.__class__.__name__, str(block_size), filename),
 		)
 		
-		num_cores = multiprocessing.cpu_count()
+		num_cores = int(multiprocessing.cpu_count() / 2)
 		print(f"***** number of CORES: {num_cores} *****")
-		fileList = os.listdir(self.file_path)
+	
+		xzFiles = os.listdir(self.file_path)
+		self.txtpath = "./owt_txt"
+		if not os.path.exists(self.txtpath):
+			os.mkdir(self.txtpath)
+		print("Dumping txt file to owt_txt")
+		for i in tqdm(range(len(xzFiles))):
+			xzfile = xzFiles[i]
+			with tarfile.open(os.path.join(self.file_path, xzfile)) as f:
+				f.extractall(self.txtpath)
+
+		fileList = os.listdir(self.txtpath)
 		logger.info(f"{len(fileList)} number of file exists")
 		file_per_core = int(len(fileList)/num_cores)
 		split_file = list()
@@ -57,8 +90,9 @@ class SplitTextDataset(Dataset):
 				temp = pool.map(self._tokenize, split_file)
 				for _list in temp:
 					self.examples += _list
+				logger.info("Saving....")	
 				torch.save(self.examples, cached_features_file)
-				sys.exit()
+				logger.info("Done Saving....")		
 		
 	def _tokenize(self, file_list):
 		defList = list()
@@ -67,7 +101,7 @@ class SplitTextDataset(Dataset):
 				print(f"pid: {os.getpid()} is working on {i}/{len(file_list)}")
 			_file = file_list[i]
 			tokenized_text = list()
-			f = open(os.path.join(self.file_path, _file), "r")
+			f = open(os.path.join(self.txtpath, _file), "r")
 			lines = f.readlines()
 			for line in lines:
 				text = line.rstrip('\n')

@@ -1,0 +1,12 @@
+#nsml: nsml/ml:cuda10.1-cudnn7-pytorch1.3keras2.3
+matplotlib
+tqdm
+fire
+nltk
+numpy
+transformers
+torch
+torchvision
+filelock
+dataclasses
+pathos

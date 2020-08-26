@@ -23,6 +23,7 @@ using a masked language modeling (MLM) loss.
 import logging
 import math
 import os
+import platform
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -277,4 +278,5 @@ def _mp_fn(index):
 
 
 if __name__ == "__main__":
+    print(platform.python_version())
     main()
