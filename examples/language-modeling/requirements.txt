@@ -1,4 +1,4 @@
-#nsml: nsml/ml:cuda10.1-cudnn7-pytorch1.3keras2.3
+#nsml: pytorch/pytorch:latest 
 matplotlib
 tqdm
 fire
@@ -10,3 +10,4 @@ torchvision
 filelock
 dataclasses
 pathos
+apex
