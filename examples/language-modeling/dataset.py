@@ -132,20 +132,22 @@ class MP_SplitTextDataset(Dataset):
 			self.tensorpath, "cached_lm_{}_{}_{}".format(tokenizer.__class__.__name__, str(block_size), filename),
 		)
 		
-		num_cores = int(multiprocessing.cpu_count() / 2)
-		print(f"***** number of CORES: {num_cores} *****")
+		num_cores = 10 #int(multiprocessing.cpu_count() / 2)
 	
-		xzFiles = os.listdir(self.file_path)
 		self.txtpath = "./owt_txt"
 		if not os.path.exists(self.txtpath):
 			os.mkdir(self.txtpath)
-		print("Dumping txt file to owt_txt")
-		for i in tqdm(range(len(xzFiles))):
-			xzfile = xzFiles[i]
-			with tarfile.open(os.path.join(self.file_path, xzfile)) as f:
-				f.extractall(self.txtpath)
+			print("Dumping txt file to owt_txt")
+			xzFiles = os.listdir(self.file_path)
+			for i in tqdm(range(len(xzFiles))):
+				xzfile = xzFiles[i]
+				with tarfile.open(os.path.join(self.file_path, xzfile)) as f:
+					f.extractall(self.txtpath)
+			xzFiles = None
+			del(xzFiles)
 
 		fileList = os.listdir(self.txtpath)
+		fileList.sort()
 		logger.info(f"{len(fileList)} number of file exists")
 		file_per_core = int(len(fileList)/num_cores)
 		split_file = list()
@@ -154,6 +156,8 @@ class MP_SplitTextDataset(Dataset):
 				split_file.append(fileList[file_per_core*i:])
 			else:
 				split_file.append(fileList[file_per_core*i:file_per_core*(i+1)])
+		fileList = None
+		del(fileList)
 		self.examples = list()
 		
 		with FileLock(self.cached_features_file+".lock"):
@@ -167,11 +171,16 @@ class MP_SplitTextDataset(Dataset):
 				sys.exit()
 		
 	def _tokenize(self, file_list):
-		defList = list()
 		p_feature_file = self.cached_features_file + f"_{os.getpid()}"
 		for i in range(len(file_list)):
-			if i%100000 == 0:
+			if i%10000 == 0:
 				print(f"pid: {os.getpid()} is working on {i}/{len(file_list)}")
+				if i > 0:
+					print(f"Saving pid {os.getpid()}. Dumping list of length {len(defList)}")
+					torch.save(defList, p_feature_file+"_"+str(i))
+				defList = None
+				del defList
+				defList = list()
 			_file = file_list[i]
 			tokenized_text = list()
 			f = open(os.path.join(self.txtpath, _file), "r")
@@ -183,13 +192,14 @@ class MP_SplitTextDataset(Dataset):
 				if len(tokenized_text) > self.block_size:
 					defList.append(torch.tensor(self.tokenizer.build_inputs_with_special_tokens(tokenized_text[:self.block_size]), dtype=torch.long))
 					tokenized_text = tokenized_text[self.block_size:]
+			lines = None
+			del lines
 			f.close()
 		
-#os.system("rm {os.path.join(self.txtpath, _file)}")
 		print(f"Saving pid {os.getpid()}. Dumping list of length {len(defList)}")
 		torch.save(defList, p_feature_file)
 		print(f"Done saving pid {os.getpid()}")
-		return defList 
+		return 
 	
 	def __len__(self):
 		return len(self.examples)

@@ -120,7 +120,7 @@ def get_dataset(args: DataTrainingArguments, tokenizer: PreTrainedTokenizer, eva
     if args.line_by_line:
         return LineByLineTextDataset(tokenizer=tokenizer, file_path=file_path, block_size=args.block_size)
     else:
-        return BertTextDataset(
+        return MP_SplitTextDataset(
             tokenizer=tokenizer, file_path=file_path, block_size=args.block_size, overwrite_cache=args.overwrite_cache
         )
 
