@@ -1,4 +1,4 @@
-#nsml: pytorch/pytorch:latest 
+#nsml: sjpark9503/edlab_env
 matplotlib
 tqdm
 fire
