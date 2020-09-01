@@ -53,14 +53,19 @@ class SplitTextDataset(Dataset):
 		self.block_size = block_size
 		self.block_size -= tokenizer.num_special_tokens_to_add(pair=False)
 		directory, filename = os.path.split(file_path)
+
+		startidx = 0
+		endidx = 10000
+
 		# ./ -> directory
 		cached_features_file = os.path.join(
-			"./", "cached_lm_{}_{}_{}".format(tokenizer.__class__.__name__, str(block_size), filename),
+			"./", "cached_lm_{}_{}_{}_{}_{}".format(tokenizer.__class__.__name__, str(block_size), filename, startidx, endidx),
 		)
-		
+
 		xzFiles = os.listdir(self.file_path)
 		self.txtpath = "./owt_txt"
 		self.tensorpath = "./owt_tensor"	
+		"""
 		if not os.path.exists(self.txtpath):
 			os.mkdir(self.txtpath)
 		print("Dumping txt file to owt_txt")
@@ -68,9 +73,13 @@ class SplitTextDataset(Dataset):
 			xzfile = xzFiles[i]
 			with tarfile.open(os.path.join(self.file_path, xzfile)) as f:
 				f.extractall(self.txtpath)
+		"""
 
 		fileList = os.listdir(self.txtpath)
-		logger.info(f"{len(fileList)} number of file exists")
+		fileList.sort()
+		fileList = fileList[startidx:endidx]
+		logger.info(f"start index: {startidx}, end index: {endidx}")
+		logger.info(f"{len(fileList)} number of file exists: should be {endidx-startidx+1}")
 		self.examples = list()
 		
 		if os.path.exists(cached_features_file) and not overwrite_cache:
@@ -82,7 +91,8 @@ class SplitTextDataset(Dataset):
 			logger.info("Saving....")	
 			torch.save(self.examples, cached_features_file)
 			logger.info("Done Saving....")		
-		
+			sys.exit()
+
 	def _tokenize(self, file_list):
 		for i in tqdm(range(len(file_list))):
 			_file = file_list[i]
@@ -98,7 +108,6 @@ class SplitTextDataset(Dataset):
 					self.examples.append(torch.tensor(self.tokenizer.build_inputs_with_special_tokens(tokenized_text[:self.block_size]), dtype=torch.long))
 					fileList.append(torch.tensor(self.tokenizer.build_inputs_with_special_tokens(tokenized_text[:self.block_size]), dtype=torch.long))
 					tokenized_text = tokenized_text[self.block_size:]
-			torch.save(fileList, os.path.join(self.tensorpath, _file+".txt"))
 			f.close()
 		return 
 	
