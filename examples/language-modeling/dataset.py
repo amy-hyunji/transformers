@@ -61,9 +61,8 @@ class SplitTextDataset(Dataset):
 		cached_features_file = os.path.join(
 			"./", "cached_lm_{}_{}_{}_{}_{}".format(tokenizer.__class__.__name__, str(block_size), filename, startidx, endidx),
 		)
+		print(f"cached_features_file: {cached_features_file}")
 
-		xzFiles = os.listdir(self.file_path)
-		self.txtpath = "./owt_txt"
 		self.tensorpath = "./owt_tensor"	
 		"""
 		if not os.path.exists(self.txtpath):
@@ -75,7 +74,7 @@ class SplitTextDataset(Dataset):
 				f.extractall(self.txtpath)
 		"""
 
-		fileList = os.listdir(self.txtpath)
+		fileList = os.listdir(self.file_path)
 		fileList.sort()
 		fileList = fileList[startidx:endidx]
 		logger.info(f"start index: {startidx}, end index: {endidx}")
@@ -98,7 +97,7 @@ class SplitTextDataset(Dataset):
 			_file = file_list[i]
 			fileList = list()
 			tokenized_text = list()
-			f = open(os.path.join(self.txtpath, _file), "r")
+			f = open(os.path.join(self.file_path, _file), "r")
 			lines = f.readlines()
 			for line in lines:
 				text = line.rstrip('\n')
