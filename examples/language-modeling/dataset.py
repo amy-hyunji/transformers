@@ -54,8 +54,9 @@ class SplitTextDataset(Dataset):
 		self.block_size -= tokenizer.num_special_tokens_to_add(pair=False)
 		directory, filename = os.path.split(file_path)
 
-		startidx = 0
-		endidx = 10000
+		idx = 7
+		startidx = 1000000*idx
+		endidx = 1000000*(idx+1)
 
 		# ./ -> directory
 		cached_features_file = os.path.join(
@@ -75,8 +76,13 @@ class SplitTextDataset(Dataset):
 		"""
 
 		fileList = os.listdir(self.file_path)
+		logger.info(f"Total number of fileList: {len(fileList)}")
 		fileList.sort()
-		fileList = fileList[startidx:endidx]
+		if idx == 8:
+			fileList = fileList[startidx:]
+			endidx = len(fileList)
+		else:
+			fileList = fileList[startidx:endidx]
 		logger.info(f"start index: {startidx}, end index: {endidx}")
 		logger.info(f"{len(fileList)} number of file exists: should be {endidx-startidx+1}")
 		self.examples = list()
@@ -214,12 +220,11 @@ class MP_SplitTextDataset(Dataset):
 
 	def __getitem__(self, i) -> torch.Tensor:
 		return torch.tensor(self.examples[i], dtype=torch.long)
-	
-class BertTextDataset(Dataset):
-    """
-    This will be superseded by a framework-agnostic approach
-    soon.
-    """
+
+"""
+load existing cache dataset
+"""
+class CacheTextDataset(Dataset):
 
     def __init__(
         self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, overwrite_cache=False,

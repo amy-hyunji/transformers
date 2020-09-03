@@ -40,7 +40,7 @@ from transformers import (
     TrainingArguments,
     set_seed,
 )
-from dataset import BertTextDataset, MP_SplitTextDataset, LineByLineTextDataset, TextDataset, SplitTextDataset
+from dataset import CacheTextDataset, MP_SplitTextDataset, LineByLineTextDataset, TextDataset, SplitTextDataset
 
 
 logger = logging.getLogger(__name__)
@@ -120,7 +120,7 @@ def get_dataset(args: DataTrainingArguments, tokenizer: PreTrainedTokenizer, eva
     if args.line_by_line:
         return LineByLineTextDataset(tokenizer=tokenizer, file_path=file_path, block_size=args.block_size)
     else:
-        return SplitTextDataset(
+        return CacheTextDataset(
             tokenizer=tokenizer, file_path=file_path, block_size=args.block_size, overwrite_cache=args.overwrite_cache
         )
 
