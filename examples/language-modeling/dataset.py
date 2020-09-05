@@ -221,8 +221,34 @@ class MP_SplitTextDataset(Dataset):
 	def __getitem__(self, i) -> torch.Tensor:
 		return torch.tensor(self.examples[i], dtype=torch.long)
 
+class CacheTextDataset(Dataset):
+
+    def __init__(
+        self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, overwrite_cache=False,
+    ):
+          start = time.time()
+          self.files = os.listdir(file_path)			
+          self.files.sort()
+          self.examples = list()
+          logger.info("Loading....")
+
+          for _file in self.files:
+             print(f"loading {_file} from {self.files}")
+             self.examples += torch.load(os.path.join(file_path, _file))
+          logger.info(
+               "Loading features from cached file %s [took %.3f s]", os.path.join(file_path), time.time() - start
+           )
+
+    def __len__(self):
+        return len(self.examples) 
+
+    def __getitem__(self, i) -> torch.Tensor: 
+        return torch.tensor(self.examples[i], dtype=torch.long)
+
+
 """
 load existing cache dataset
+"""
 """
 class CacheTextDataset(Dataset):
 
@@ -230,17 +256,33 @@ class CacheTextDataset(Dataset):
         self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, overwrite_cache=False,
     ):
           start = time.time()
-          self.examples = torch.load(file_path)
+          self.files = os.listdir(file_path)			
+          self.files.sort()
+          self.examples = list()
+          logger.info("Loading....")
+
+          self.fileidx = 0
+          self.examples += torch.load(os.path.join(file_path, self.files[self.fileidx%8]))
+          self.curlen = len(self.examples)
+          self.prevlen = 0
           logger.info(
-               "Loading features from cached file %s [took %.3f s]", file_path, time.time() - start
+               "Loading features from cached file %s [took %.3f s]", os.path.join(file_path, self.files[self.fileidx%8]), time.time() - start
            )
 
     def __len__(self):
-        return len(self.examples)
+        return len(self.examples) * 8
 
-    def __getitem__(self, i) -> torch.Tensor:
-        return torch.tensor(self.examples[i], dtype=torch.long)
+    def __getitem__(self, i) -> torch.Tensor: 
+        if (i == self.prevlen + self.curlen):
+          self.examples = list(); self.fileidx += 1  
+          logger.info(f"Loading features from new cached file {self.files[self.fileidx%8]}")
+          self.examples += torch.load(os.path.join(file_path, self.files[self.fileidx%8]))
+          self.prevlen += self.curlen
+          self.curlen = len(self.examples)
+        print(f"prevlen: {self.prevlen}, curlen: {self.curlen}, i: {i}")
 
+        return torch.tensor(self.examples[i-self.prevlen], dtype=torch.long)
+"""
 				
 class TextDataset(Dataset):
     """
